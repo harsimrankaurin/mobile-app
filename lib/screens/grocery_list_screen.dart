@@ -146,7 +146,7 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                               itemBuilder: (context, index) {
                                 final item = itemsToBuy[index];
                                 return ListTile(
-                                  contentPadding: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                                  contentPadding: EdgeInsets.symmetric(vertical: 1.0, horizontal: 6.0),
                                   title: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -154,9 +154,17 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                                         item.name,
                                         style: TextStyle(fontSize: 16),
                                       ),
+                                      if (item.restockRequired && item.stock > 0)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 1.0),
+                                        child: Text(
+                                          'Stock: ${item.stock}',
+                                          style: TextStyle(fontSize: 14),
+                                        ),
+                                      ),
                                       if (item.comment.isNotEmpty)
                                         Padding(
-                                          padding: const EdgeInsets.only(top: 4.0),
+                                          padding: const EdgeInsets.only(top: 1.0),
                                           child: Text(
                                             'Comment: ${item.comment}',
                                             style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
@@ -208,8 +216,8 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                                     },
                                     secondary: Image.asset(
                                       'assets/${grocery.image}',
-                                      width: 50,
-                                      height: 50,
+                                      width: 70,
+                                      height: 70,
                                       fit: BoxFit.cover,
                                     ),
                                   ),
