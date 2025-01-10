@@ -34,6 +34,8 @@ class GroceryService {
         // Update the stock
         await doc.reference.update({
           'stock': grocery.stock, // Update the stock field
+          'restock_required' : grocery.restockRequired,
+          'comment': grocery.comment,  // Update comment field
         });
 
         print("Stock updated successfully for ${grocery.name}.");
@@ -45,4 +47,5 @@ class GroceryService {
       throw e; // Rethrow exception for the calling code to handle
     }
   }
+
 }

@@ -5,7 +5,8 @@ class Grocery {
   int stock;
   final String image;
   final String category;
-  final bool restockRequired;
+  bool restockRequired;
+  String comment;
 
   // Constructor
   Grocery({
@@ -14,6 +15,7 @@ class Grocery {
     required this.image,
     required this.category,
     required this.restockRequired,
+    required this.comment,
   });
 
   // Method to create a Grocery object from a JSON Map (for Firebase Realtime Database)
@@ -24,6 +26,7 @@ class Grocery {
       image: json['image'],
       category: json['category'],
       restockRequired: json['restock_required'],
+      comment: json['comment'],
     );
   }
 
@@ -37,6 +40,7 @@ class Grocery {
       image: data['image'] ?? '', // Default to empty string if 'image' is null
       category: data['category'] ?? '', // Default to empty string if 'category' is null
       restockRequired: data['restock_required'] ?? false, // Default to false if 'restock_required' is null
+      comment: data['comment'] ?? '',
     );
   }
 
@@ -48,6 +52,7 @@ class Grocery {
       'image': image,
       'category': category,
       'restock_required': restockRequired,
+      'comment': comment,
     };
   }
 }
