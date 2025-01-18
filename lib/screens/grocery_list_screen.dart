@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_1/services/grocery_service.dart';
 import 'package:flutter_application_1/models/grocery.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 
 class GroceryListScreen extends StatefulWidget {
   @override

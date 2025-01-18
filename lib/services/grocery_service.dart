@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter_application_1/models/grocery.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:path/path.dart' as path;
@@ -27,6 +25,7 @@ class GroceryService {
       // Save the image with a unique name (using timestamp)
       final imageName = 'assets/images/$name.jpg';
       final newImagePath = path.join(directory, imageName);
+      // ignore: unused_local_variable
       final newImageFile = await imageFile.copy(newImagePath);
       print("Image Path: $newImagePath");
       // Return the relative path to be stored in Firestore
