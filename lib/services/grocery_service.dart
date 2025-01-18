@@ -1,5 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_application_1/models/grocery.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:path/path.dart' as path;
 
 class GroceryService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -7,45 +11,60 @@ class GroceryService {
   // Fetch all grocery data from Firestore
   Future<List<Grocery>> fetchGroceryJson() async {
     try {
-      // Fetch the grocery data collection from Firestore
       QuerySnapshot querySnapshot = await _firestore.collection('Grocery_List').get();
-
-      // Convert each document into a Grocery object
       return querySnapshot.docs.map((doc) => Grocery.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('Error fetching data: $e');
     }
   }
 
+  // Save image to local storage and return the relative path
+  Future<String?> saveImageToLocalStorage(File imageFile, String name) async {
+    try {
+      // Get the app's document directory to save images
+      final directory = Directory.current.path;
+      // print("Current directory: ${Directory.current.path}");
+      // Save the image with a unique name (using timestamp)
+      final imageName = 'assets/images/$name.jpg';
+      final newImagePath = path.join(directory, imageName);
+      final newImageFile = await imageFile.copy(newImagePath);
+      print("Image Path: $newImagePath");
+      // Return the relative path to be stored in Firestore
+      return '$imageName';
+    } catch (e) {
+      print("Error saving image: $e");
+      return null;
+    }
+  }
+
+  // Add a new grocery item to Firestore
+  Future<void> addNewGrocery(Grocery grocery) async {
+    try {
+      await _firestore.collection('Grocery_List').add(grocery.toMap());
+    } catch (e) {
+      print("Error adding new grocery: $e");
+    }
+  }
+
+  // Update stock information in Firestore
   Future<void> updateStockInFirestore(Grocery grocery) async {
     try {
-      // Fetch the grocery item document by its name (name is unique)
       QuerySnapshot snapshot = await _firestore.collection('Grocery_List')
           .where('name', isEqualTo: grocery.name)
           .get();
 
       if (snapshot.docs.isNotEmpty) {
-        // Document exists, update the stock field for the first document found
         DocumentSnapshot doc = snapshot.docs.first;
-        
-        // Print the doc data for debugging
-        print('Found document: ${doc.data()}');
-
-        // Update the stock
         await doc.reference.update({
-          'stock': grocery.stock, // Update the stock field
-          'restock_required' : grocery.restockRequired,
-          'comment': grocery.comment,  // Update comment field
+          'stock': grocery.stock,
+          'restock_required': grocery.restockRequired,
+          'comment': grocery.comment,
         });
-
-        print("Stock updated successfully for ${grocery.name}.");
       } else {
-        print("No document found for ${grocery.name}. Please check the Firestore data.");
+        print("No document found for ${grocery.name}");
       }
     } catch (e) {
       print("Error updating stock in Firestore: $e");
-      throw e; // Rethrow exception for the calling code to handle
     }
   }
-
 }

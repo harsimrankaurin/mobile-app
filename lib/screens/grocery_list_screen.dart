@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_1/services/grocery_service.dart';
 import 'package:flutter_application_1/models/grocery.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 class GroceryListScreen extends StatefulWidget {
   @override
@@ -12,28 +16,27 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
   List<Grocery> groceries = [];
   Map<String, List<Grocery>> categorizedGroceries = {};
   List<Grocery> itemsToBuy = [];
-  
   late TabController _tabController;
 
-  // Create a map to store controllers for each grocery item
-  Map<String, TextEditingController> commentControllers = {};
+  // Variables for image picking
+  final ImagePicker _picker = ImagePicker();
+  File? _image;
+  
+  // Controllers for the form inputs
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _commentController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     loadGroceryData();
-    _tabController = TabController(length: 2, vsync: this); // Two tabs: Items to Buy, Grocery List
+    _tabController = TabController(length: 3, vsync: this); // Three tabs now: Items to Buy, Grocery List, Add Item
   }
 
   Future<void> loadGroceryData() async {
     try {
       List<Grocery> groceryList = await groceryService.fetchGroceryJson();
-
-      // Initialize controllers for comments
-      commentControllers = {};
-      for (var grocery in groceryList) {
-        commentControllers[grocery.name] = TextEditingController(text: grocery.comment);
-      }
 
       // Group groceries by category
       final grouped = <String, List<Grocery>>{};
@@ -41,7 +44,7 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
 
       for (var grocery in groceryList) {
         // Add low stock items to the "Items to Buy" list
-        if (grocery.stock == 0) {
+        if (grocery.stock == 0 || grocery.restockRequired) {
           lowStockItems.add(grocery);
         }
 
@@ -78,33 +81,74 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
     });
   }
 
-  void updateComment(Grocery grocery, String comment) {
-    setState(() {
-      grocery.comment = comment;
-    });
-    groceryService.updateStockInFirestore(grocery); // Update the comment in Firestore
-  }
-
-
   void updateStock(Grocery grocery, int delta) {
     setState(() {
       grocery.stock += delta;
+      
       if (grocery.stock < 0) {
         grocery.stock = 0; // Prevent negative stock
       }
 
-      //Update the restock_required field
-      grocery.restockRequired = grocery.stock == 0;
-
-      if (grocery.stock == 0 && !itemsToBuy.contains(grocery)) {
+      // Update the restock_required field
+      if (grocery.stock == 0 && !itemsToBuy.contains(grocery) && !grocery.restockRequired) {
         itemsToBuy.add(grocery); // Add to "Items to Buy" if stock is zero
-      } else if (grocery.stock > 0 && itemsToBuy.contains(grocery)) {
+        grocery.restockRequired = true;
+      } else if (grocery.stock > 0 && itemsToBuy.contains(grocery) && grocery.restockRequired) {
         itemsToBuy.remove(grocery); // Remove from "Items to Buy" if stock is replenished
+        grocery.restockRequired = false;
       }
 
       // Update stock in Firestore after modification
       groceryService.updateStockInFirestore(grocery);
     });
+  }
+
+  // Pick an image from the gallery
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
+
+  // Add new grocery item
+  Future<void> addNewItem() async {
+    String name = _nameController.text;
+    String category = _categoryController.text;
+    String comment = _commentController.text;
+
+    if (_image != null && name.isNotEmpty && category.isNotEmpty) {
+      // Save the image to the assets folder (temporarily in a local directory)
+      final imagePath = await groceryService.saveImageToLocalStorage(_image!, name);
+
+      if (imagePath != null) {
+        // Create new Grocery object
+        final newGrocery = Grocery(
+          name: name,
+          stock: 0, // Example stock, could be an input field as well
+          image: imagePath, // Local image path
+          category: category, // User input for category
+          restockRequired: true, // Set restock required flag as needed
+          comment: comment, // User input for comment
+        );
+
+        // Add the new grocery to Firestore
+        await groceryService.addNewGrocery(newGrocery);
+
+        // Clear the form
+        _nameController.clear();
+        _categoryController.clear();
+        _commentController.clear();
+        setState(() {
+          _image = null;
+        });
+
+        // Refresh the grocery list
+        loadGroceryData();
+      }
+    }
   }
 
   @override
@@ -117,8 +161,18 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
           tabs: [
             Tab(text: 'Items to Buy'),
             Tab(text: 'Grocery List'),
+            Tab(text: 'Add Item'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.close),
+            onPressed: () {
+              // Close the app when pressed
+              SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+            },
+          ),
+        ],
       ),
       body: groceries.isEmpty
           ? Center(child: CircularProgressIndicator())
@@ -155,13 +209,13 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                                         style: TextStyle(fontSize: 16),
                                       ),
                                       if (item.restockRequired && item.stock > 0)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 1.0),
-                                        child: Text(
-                                          'Stock: ${item.stock}',
-                                          style: TextStyle(fontSize: 14),
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 1.0),
+                                          child: Text(
+                                            'Stock: ${item.stock}',
+                                            style: TextStyle(fontSize: 14),
+                                          ),
                                         ),
-                                      ),
                                       if (item.comment.isNotEmpty)
                                         Padding(
                                           padding: const EdgeInsets.only(top: 1.0),
@@ -215,20 +269,10 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                                       toggleItemToBuy(grocery, isChecked!);
                                     },
                                     secondary: Image.asset(
-                                      'assets/${grocery.image}',
+                                      '${grocery.image}',
                                       width: 70,
                                       height: 70,
                                       fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                    child: TextField(
-                                      controller: commentControllers[grocery.name],
-                                      decoration: InputDecoration(labelText: 'Enter a comment'),
-                                      onChanged: (comment) {
-                                        updateComment(grocery, comment);
-                                      },
                                     ),
                                   ),
                                 ],
@@ -239,6 +283,51 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                       ),
                     ),
                   ],
+                ),
+                // Third Tab - Add New Grocery Item
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        Text('Add New Item', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        SizedBox(height: 20),
+                        TextField(
+                          controller: _nameController,
+                          decoration: InputDecoration(labelText: 'Name'),
+                        ),
+                        TextField(
+                          controller: _categoryController,
+                          decoration: InputDecoration(labelText: 'Category'),
+                        ),
+                        TextField(
+                          controller: _commentController,
+                          decoration: InputDecoration(labelText: 'Comment'),
+                        ),
+                        SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: _pickImage,
+                          icon: Icon(Icons.add_a_photo),
+                          label: Text('Pick an Image'),
+                        ),
+                        if (_image != null) 
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Image.file(
+                              _image!,
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: addNewItem,
+                          child: Text('Add Item'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
