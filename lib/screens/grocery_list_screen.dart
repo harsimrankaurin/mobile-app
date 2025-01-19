@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_1/services/grocery_service.dart';
 import 'package:flutter_application_1/models/grocery.dart';
 import 'package:flutter/services.dart';
@@ -17,14 +16,11 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
   List<Grocery> itemsToBuy = [];
   late TabController _tabController;
 
-  // Variables for image picking
-  final ImagePicker _picker = ImagePicker();
-  File? _image;
-  
   // Controllers for the form inputs
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
+  final TextEditingController _imageUrlController = TextEditingController(); // New controller for URL
 
   @override
   void initState() {
@@ -102,51 +98,35 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
     });
   }
 
-  // Pick an image from the gallery
-  Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
-    }
-  }
-
   // Add new grocery item
   Future<void> addNewItem() async {
     String name = _nameController.text;
     String category = _categoryController.text;
     String comment = _commentController.text;
+    String imageUrl = _imageUrlController.text; // Get URL from the user
 
-    if (_image != null && name.isNotEmpty && category.isNotEmpty) {
-      // Save the image to the assets folder (temporarily in a local directory)
-      final imagePath = await groceryService.saveImageToLocalStorage(_image!, name);
+    if (imageUrl.isNotEmpty && name.isNotEmpty && category.isNotEmpty) {
+      // Create new Grocery object
+      final newGrocery = Grocery(
+        name: name,
+        stock: 0, // Example stock, could be an input field as well
+        image: imageUrl, // Use the URL provided by the user
+        category: category, // User input for category
+        restockRequired: true, // Set restock required flag as needed
+        comment: comment, // User input for comment
+      );
 
-      if (imagePath != null) {
-        // Create new Grocery object
-        final newGrocery = Grocery(
-          name: name,
-          stock: 0, // Example stock, could be an input field as well
-          image: imagePath, // Local image path
-          category: category, // User input for category
-          restockRequired: true, // Set restock required flag as needed
-          comment: comment, // User input for comment
-        );
+      // Add the new grocery to Firestore
+      await groceryService.addNewGrocery(newGrocery);
 
-        // Add the new grocery to Firestore
-        await groceryService.addNewGrocery(newGrocery);
+      // Clear the form
+      _nameController.clear();
+      _categoryController.clear();
+      _commentController.clear();
+      _imageUrlController.clear(); // Clear the URL field
 
-        // Clear the form
-        _nameController.clear();
-        _categoryController.clear();
-        _commentController.clear();
-        setState(() {
-          _image = null;
-        });
-
-        // Refresh the grocery list
-        loadGroceryData();
-      }
+      // Refresh the grocery list
+      loadGroceryData();
     }
   }
 
@@ -267,10 +247,10 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                                     onChanged: (isChecked) {
                                       toggleItemToBuy(grocery, isChecked!);
                                     },
-                                    secondary: Image.asset(
-                                      '${grocery.image}',
-                                      width: 70,
-                                      height: 70,
+                                    secondary: Image.network(
+                                      grocery.image, // Load the image from URL
+                                      width: 80,
+                                      height: 80,
                                       fit: BoxFit.cover,
                                     ),
                                   ),
@@ -303,22 +283,10 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                           controller: _commentController,
                           decoration: InputDecoration(labelText: 'Comment'),
                         ),
-                        SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: _pickImage,
-                          icon: Icon(Icons.add_a_photo),
-                          label: Text('Pick an Image'),
+                        TextField(
+                          controller: _imageUrlController, // Input field for image URL
+                          decoration: InputDecoration(labelText: 'Image URL'),
                         ),
-                        if (_image != null) 
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: Image.file(
-                              _image!,
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
                         SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: addNewItem,

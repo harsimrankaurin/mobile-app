@@ -1,7 +1,5 @@
-import 'dart:io';
 import 'package:flutter_application_1/models/grocery.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:path/path.dart' as path;
 
 class GroceryService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -13,26 +11,6 @@ class GroceryService {
       return querySnapshot.docs.map((doc) => Grocery.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('Error fetching data: $e');
-    }
-  }
-
-  // Save image to local storage and return the relative path
-  Future<String?> saveImageToLocalStorage(File imageFile, String name) async {
-    try {
-      // Get the app's document directory to save images
-      final directory = Directory.current.path;
-      // print("Current directory: ${Directory.current.path}");
-      // Save the image with a unique name (using timestamp)
-      final imageName = 'assets/images/$name.jpg';
-      final newImagePath = path.join(directory, imageName);
-      // ignore: unused_local_variable
-      final newImageFile = await imageFile.copy(newImagePath);
-      print("Image Path: $newImagePath");
-      // Return the relative path to be stored in Firestore
-      return '$imageName';
-    } catch (e) {
-      print("Error saving image: $e");
-      return null;
     }
   }
 
