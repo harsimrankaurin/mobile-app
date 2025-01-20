@@ -14,6 +14,7 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
   Map<String, List<Grocery>> categorizedGroceries = {};
   List<Grocery> itemsToBuy = [];
   late TabController _tabController;
+  Map<String, TextEditingController> commentControllers = {};
 
   // Controllers for the form inputs
   final TextEditingController _nameController = TextEditingController();
@@ -31,6 +32,12 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
   Future<void> loadGroceryData() async {
     try {
       List<Grocery> groceryList = await groceryService.fetchGroceryJson();
+
+      // Initialize controllers for comments
+      commentControllers = {};
+      for (var grocery in groceryList) {
+        commentControllers[grocery.name] = TextEditingController(text: grocery.comment);
+      }
 
       // Group groceries by category
       final grouped = <String, List<Grocery>>{};
@@ -127,6 +134,15 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
       // Refresh the grocery list
       loadGroceryData();
     }
+  }
+
+  // Function to update the comment for a grocery item
+  void updateComment(Grocery grocery, String newComment) {
+    setState(() {
+      grocery.comment = newComment; // Directly update the model in state
+    });
+    // Ensure Firestore is updated after comment change
+    groceryService.updateStockInFirestore(grocery);
   }
 
   @override
@@ -248,9 +264,19 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                                     },
                                     secondary: Image.network(
                                       grocery.image, // Load the image from URL
-                                      width: 80,
-                                      height: 80,
+                                      width: 60,
+                                      height: 150,
                                       fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                    child: TextField(
+                                      controller: commentControllers[grocery.name],
+                                      decoration: InputDecoration(labelText: 'Enter a comment'),
+                                      onChanged: (comment) {
+                                        updateComment(grocery, comment);
+                                      },
                                     ),
                                   ),
                                 ],
