@@ -45,7 +45,9 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
 
       for (var grocery in groceryList) {
         // Add low stock items to the "Items to Buy" list
-        if (grocery.stock == 0 || grocery.restockRequired) {
+        if (grocery.stock == 0 && grocery.restockRequired) {
+          lowStockItems.add(grocery);
+        }else if (grocery.stock >=0 && grocery.restockRequired) {
           lowStockItems.add(grocery);
         }
 
@@ -258,16 +260,18 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                                       ],
                                     ),
                                     subtitle: Text('Stock: ${grocery.stock}'),
-                                    value: itemsToBuy.contains(grocery),
+                                    value: grocery.restockRequired,
                                     onChanged: (isChecked) {
                                       toggleItemToBuy(grocery, isChecked!);
                                     },
-                                    secondary: Image.network(
-                                      grocery.image, // Load the image from URL
-                                      width: 60,
-                                      height: 150,
-                                      fit: BoxFit.cover,
-                                    ),
+                                    secondary: grocery.image.isNotEmpty
+                                      ? Image.network(
+                                          grocery.image, // Load the image from URL
+                                          width: 60,
+                                          height: 150,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
