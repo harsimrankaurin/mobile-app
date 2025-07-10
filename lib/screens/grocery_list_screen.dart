@@ -22,7 +22,7 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
  
   // Controllers for the form inputs
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _categoryController = TextEditingController();
+  // final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
   final TextEditingController _imageUrlController = TextEditingController(); // New controller for URL
 
@@ -372,7 +372,9 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                         ),
                         SizedBox(height: 20),
                         ElevatedButton(
-                          onPressed: (_nameController != null && selectedCategory != null && _imageUrlController != null)
+                          onPressed: (_nameController.text.isNotEmpty &&
+                              selectedCategory != null &&
+                              _imageUrlController.text.isNotEmpty)
                             ? addNewItem
                             : null,
                           child: Text('Add Item'),
