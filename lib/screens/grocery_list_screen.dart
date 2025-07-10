@@ -3,6 +3,7 @@ import 'package:flutter_application_1/services/grocery_service.dart';
 import 'package:flutter_application_1/models/grocery.dart';
 import 'package:flutter/services.dart';
 
+
 class GroceryListScreen extends StatefulWidget {
   @override
   _GroceryListScreenState createState() => _GroceryListScreenState();
@@ -15,7 +16,10 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
   List<Grocery> itemsToBuy = [];
   late TabController _tabController;
   Map<String, TextEditingController> commentControllers = {};
-
+  String? selectedCategory;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+ 
   // Controllers for the form inputs
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
@@ -27,6 +31,18 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
     super.initState();
     loadGroceryData();
     _tabController = TabController(length: 3, vsync: this); // Three tabs now: Items to Buy, Grocery List, Add Item
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> loadGroceryData() async {
@@ -108,18 +124,17 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
 
   // Add new grocery item
   Future<void> addNewItem() async {
-    String name = _nameController.text;
-    String category = _categoryController.text;
-    String comment = _commentController.text;
-    String imageUrl = _imageUrlController.text; // Get URL from the user
+    String name = _nameController.text.trim();
+    String comment = _commentController.text.trim();
+    String imageUrl = _imageUrlController.text.trim();
 
-    if (imageUrl.isNotEmpty && name.isNotEmpty && category.isNotEmpty) {
+    if (name.isNotEmpty && selectedCategory != null && imageUrl.isNotEmpty) {
       // Create new Grocery object
       final newGrocery = Grocery(
         name: name,
         stock: 0, // Example stock, could be an input field as well
         image: imageUrl, // Use the URL provided by the user
-        category: category, // User input for category
+        category: selectedCategory!, // User input for category
         restockRequired: true, // Set restock required flag as needed
         comment: comment, // User input for comment
       );
@@ -129,12 +144,16 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
 
       // Clear the form
       _nameController.clear();
-      _categoryController.clear();
       _commentController.clear();
       _imageUrlController.clear(); // Clear the URL field
-
+      setState(() {
+        selectedCategory = null; // Reset dropdown
+      });
       // Refresh the grocery list
       loadGroceryData();
+    } else {
+      // You can show a Snackbar here if needed
+      print('Please fill all fields.');
     }
   }
 
@@ -145,6 +164,42 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
     });
     // Ensure Firestore is updated after comment change
     groceryService.updateStockInFirestore(grocery);
+  }
+
+  Widget buildGroceryTile(Grocery grocery) {
+    return Column(
+      children: [
+        CheckboxListTile(
+          title: Row(
+            children: [
+              Expanded(child: Text(grocery.name)),
+            ],
+          ),
+          value: grocery.restockRequired,
+          onChanged: (isChecked) {
+            toggleItemToBuy(grocery, isChecked!);
+          },
+          secondary: grocery.image.isNotEmpty
+              ? Image.network(
+                  grocery.image,
+                  width: 60,
+                  height: 150,
+                  fit: BoxFit.cover,
+                )
+              : null,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: TextField(
+            controller: commentControllers[grocery.name],
+            decoration: InputDecoration(labelText: 'Enter a comment'),
+            onChanged: (comment) {
+              updateComment(grocery, comment);
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -160,15 +215,15 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
             Tab(text: 'Add Item'),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.close),
-            onPressed: () {
-              // Close the app when pressed
-              SystemChannels.platform.invokeMethod('SystemNavigator.pop');
-            },
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: Icon(Icons.close),
+        //     onPressed: () {
+        //       // Close the app when pressed
+        //       SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+        //     },
+        //   ),
+        // ],
       ),
       body: groceries.isEmpty
           ? Center(child: CircularProgressIndicator())
@@ -195,7 +250,7 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                               itemCount: itemsToBuy.length,
                               itemBuilder: (context, index) {
                                 final item = itemsToBuy[index];
-                                return ListTile(
+                                return CheckboxListTile(
                                   contentPadding: EdgeInsets.symmetric(vertical: 1.0, horizontal: 6.0),
                                   title: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,14 +259,14 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                                         item.name,
                                         style: TextStyle(fontSize: 16),
                                       ),
-                                      if (item.restockRequired && item.stock > 0)
-                                        Padding(
-                                          padding: const EdgeInsets.only(top: 1.0),
-                                          child: Text(
-                                            'Stock: ${item.stock}',
-                                            style: TextStyle(fontSize: 14),
-                                          ),
-                                        ),
+                                      // if (item.restockRequired && item.stock > 0)
+                                      //   Padding(
+                                      //     padding: const EdgeInsets.only(top: 1.0),
+                                      //     child: Text(
+                                      //       'Stock: ${item.stock}',
+                                      //       style: TextStyle(fontSize: 14),
+                                      //     ),
+                                      //   ),
                                       if (item.comment.isNotEmpty)
                                         Padding(
                                           padding: const EdgeInsets.only(top: 1.0),
@@ -222,6 +277,18 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                                         ),
                                     ],
                                   ),
+                                  value: item.restockRequired,
+                                  onChanged: (checked) {
+                                    toggleItemToBuy(item, checked ?? false);
+                                  },
+                                  secondary: item.image.isNotEmpty
+                                      ? Image.network(
+                                          item.image,
+                                          width: 60,
+                                          height: 60,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                                 );
                               },
                             ),
@@ -234,61 +301,36 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                 // Second Tab - "Grocery List to Manage Stock"
                 Column(
                   children: [
-                    Expanded(
-                      flex: 5,
-                      child: ListView(
-                        children: categorizedGroceries.keys.map((category) {
-                          final items = categorizedGroceries[category]!;
-                          return ExpansionTile(
-                            title: Text(category, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            children: items.map((grocery) {
-                              return Column(
-                                children: [
-                                  CheckboxListTile(
-                                    title: Row(
-                                      children: [
-                                        Expanded(child: Text(grocery.name)),
-                                        IconButton(
-                                          icon: Icon(Icons.remove),
-                                          onPressed: () => updateStock(grocery, -1),
-                                        ),
-                                        Text('${grocery.stock}', style: TextStyle(fontSize: 16)),
-                                        IconButton(
-                                          icon: Icon(Icons.add),
-                                          onPressed: () => updateStock(grocery, 1),
-                                        ),
-                                      ],
-                                    ),
-                                    subtitle: Text('Stock: ${grocery.stock}'),
-                                    value: grocery.restockRequired,
-                                    onChanged: (isChecked) {
-                                      toggleItemToBuy(grocery, isChecked!);
-                                    },
-                                    secondary: grocery.image.isNotEmpty
-                                      ? Image.network(
-                                          grocery.image, // Load the image from URL
-                                          width: 60,
-                                          height: 150,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                    child: TextField(
-                                      controller: commentControllers[grocery.name],
-                                      decoration: InputDecoration(labelText: 'Enter a comment'),
-                                      onChanged: (comment) {
-                                        updateComment(grocery, comment);
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          );
-                        }).toList(),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          labelText: 'Search by name',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
                       ),
+                    ),
+                    Expanded(
+                      child: _searchQuery.isEmpty
+                      ? ListView(
+                          children: categorizedGroceries.keys.map((category) {
+                            final items = categorizedGroceries[category]!;
+                            return ExpansionTile(
+                              title: Text(category, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              children: items.map((grocery) {
+                                return buildGroceryTile(grocery);
+                              }).toList(),
+                            );
+                          }).toList(),
+                        )
+                      : ListView(
+                          children: groceries
+                              .where((grocery) => grocery.name.toLowerCase().contains(_searchQuery))
+                              .map((grocery) => buildGroceryTile(grocery))
+                              .toList(),
+                        ),
                     ),
                   ],
                 ),
@@ -304,9 +346,21 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                           controller: _nameController,
                           decoration: InputDecoration(labelText: 'Name'),
                         ),
-                        TextField(
-                          controller: _categoryController,
+                        DropdownButtonFormField<String>(
                           decoration: InputDecoration(labelText: 'Category'),
+                          value: selectedCategory,
+                          items: categorizedGroceries.keys.map((category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Text(category),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedCategory = value!;
+                            });
+                          },
+                          validator: (value) => value == null ? 'Please select a category' : null,
                         ),
                         TextField(
                           controller: _commentController,
@@ -318,7 +372,9 @@ class _GroceryListScreenState extends State<GroceryListScreen> with SingleTicker
                         ),
                         SizedBox(height: 20),
                         ElevatedButton(
-                          onPressed: addNewItem,
+                          onPressed: (_nameController != null && selectedCategory != null && _imageUrlController != null)
+                            ? addNewItem
+                            : null,
                           child: Text('Add Item'),
                         ),
                       ],

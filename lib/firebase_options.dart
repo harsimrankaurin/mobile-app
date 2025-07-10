@@ -17,24 +17,15 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for android - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return android;
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
         return windows;
       case TargetPlatform.linux:
@@ -60,13 +51,44 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: "AIzaSyDqJiIxEWGCjxfHKnH42_Bu25HkZ3Cgmqc",
-    authDomain: "grocerylist-1d885.firebaseapp.com",
-    databaseURL: "https://grocerylist-1d885-default-rtdb.firebaseio.com",
-    projectId: "grocerylist-1d885",
-    storageBucket: "grocerylist-1d885.firebasestorage.app",
-    messagingSenderId: "1017300834595",
-    appId: "1:1017300834595:web:12c0e261f128db65721496",
-    measurementId: "G-JMYJRD0FE0",
+    apiKey: 'AIzaSyDqJiIxEWGCjxfHKnH42_Bu25HkZ3Cgmqc',
+    appId: '1:1017300834595:web:9a4744517c02ec30721496',
+    messagingSenderId: '1017300834595',
+    projectId: 'grocerylist-1d885',
+    authDomain: 'grocerylist-1d885.firebaseapp.com',
+    databaseURL: 'https://grocerylist-1d885-default-rtdb.firebaseio.com',
+    storageBucket: 'grocerylist-1d885.firebasestorage.app',
+    measurementId: 'G-KL7QKH5J2L',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyDqJiIxEWGCjxfHKnH42_Bu25HkZ3Cgmqc',
+    appId: '1:1017300834595:web:12c0e261f128db65721496',
+    messagingSenderId: '1017300834595',
+    projectId: 'grocerylist-1d885',
+    authDomain: 'grocerylist-1d885.firebaseapp.com',
+    databaseURL: 'https://grocerylist-1d885-default-rtdb.firebaseio.com',
+    storageBucket: 'grocerylist-1d885.firebasestorage.app',
+    measurementId: 'G-JMYJRD0FE0',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyDbiKdmrNLjxt8BbUPVBSvzXzROFvzRqug',
+    appId: '1:1017300834595:ios:f365e643bd11f5e9721496',
+    messagingSenderId: '1017300834595',
+    projectId: 'grocerylist-1d885',
+    databaseURL: 'https://grocerylist-1d885-default-rtdb.firebaseio.com',
+    storageBucket: 'grocerylist-1d885.firebasestorage.app',
+    iosBundleId: 'com.example.flutterApplication1',
+  );
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyCWOr3QiHZ4GNXsip3vEH8Krx3MihFzrbg',
+    appId: '1:1017300834595:android:0acc9a9dabe9124c721496',
+    messagingSenderId: '1017300834595',
+    projectId: 'grocerylist-1d885',
+    databaseURL: 'https://grocerylist-1d885-default-rtdb.firebaseio.com',
+    storageBucket: 'grocerylist-1d885.firebasestorage.app',
+  );
+
 }
